@@ -1,1 +1,1 @@
-# Credit Card Froud Detection ML
+# Credit Card Fraud Detection ML
