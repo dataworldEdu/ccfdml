@@ -1,16 +1,15 @@
 
 import warnings
 warnings.filterwarnings("ignore")
-import pymysql
 import numpy as np
 import pandas as pd
-
 from sklearn.model_selection import train_test_split
-from app import dbConfig
+from sklearn.ensemble import RandomForestClassifier
+
 
 from app.model.saveModel import SavedModel
+from app.dataInfo import DataInfo
 
-from sklearn.ensemble import RandomForestClassifier
 
 import logging
 
@@ -18,39 +17,22 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-login = dbConfig.database_info
-# db 정보
-db = pymysql.connect(host=login['host'],
-                     port=login['port'],
-                     user=login['user'],
-                     password=login['password'],
-                     db=login['db'],
-                     charset=login['charset']
-                     )
-cursor = db.cursor()
 class RandomForest:
     def __init__(self):
         pass
 
-    def start(self):
+    def learnningModel(self):
+        db = DataInfo().dataInfo()
+        cursor = db.cursor()
+
+        cursor.execute("SELECT IFNULL(MAX(STUD_NUM)+1,1)  FROM MDL_MASTER")
+        mdlMtNo = cursor.fetchone()
         pd.set_option('display.max_rows', 100)
         pd.set_option('display.max_columns', 200)
 
-        cursor.execute("SELECT IFNULL(MAX(STUD_NUM)+1,1)  FROM MDL_MASTER")
-
-        mdlMtNo = cursor.fetchone()
         sql = "SELECT * FROM CREDIT_LEARN_DATA"
         logger.info("data select")
         creditDatas = pd.read_sql(sql,db)
-         # 조회한 테이블 컬럼 정보 확인
-        #creditDatas.info()
-
-        #print(creditDatas['CLASS'].value_counts())
-
-        #fig, axe = plt.subplots(ncols=1)
-        #fig.set_size_inches(6, 3)
-        #sns.countplot(creditDatas['CLASS'])
-
         # 불필요 컬럼 제거
         vCols = []
         for i in range(28):
@@ -60,12 +42,6 @@ class RandomForest:
         vCols.append('CLASS')
 
         dataV = creditDatas[vCols]
-
-        #print(dataV.head(5))
-        # min max 값 확인
-        #cols = dataV.dtypes.index.tolist()
-
-        #print(cols)
 
         # feature , label 분리
         raw_data = dataV.values
@@ -88,12 +64,13 @@ class RandomForest:
         # 테스트 데이터 예측 수행
         y_pred = randomforest.predict(test_data)
 
-
         np.set_printoptions(precision=6, suppress=True)
-
-
-
         # 모델파일저장
         SavedModel.saveModelFile(mdlMtNo[0],randomforest,y_pred,test_labels)
+        db.close()
         return mdlMtNo[0]
+
+
+
+
 
